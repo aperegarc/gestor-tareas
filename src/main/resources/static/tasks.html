@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestor de Tareas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap');
+    body {
+        font-family: 'Space Grotesk', sans-serif;
+        background-color: #ffffff;
+    }
+    .task-enter {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    .task-enter-active {
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity 300ms, transform 300ms;
+    }
+    .spinner {
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-top: 2px solid #000000;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .checkbox-custom {
+        appearance: none;
+        width: 1.25rem;
+        height: 1.25rem;
+        border: 2px solid #000;
+        border-radius: 0;
+        position: relative;
+        cursor: pointer;
+        transition: all 200ms ease;
+    }
+    .checkbox-custom:checked {
+        background-color: #000;
+    }
+    .checkbox-custom:checked::after {
+        content: '';
+        position: absolute;
+        left: 6px;
+        top: 2px;
+        width: 4px;
+        height: 8px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+    }
+    .status-message {
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        font-weight: 500;
+        border: 1px solid #000;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start py-12 px-4 bg-white">
+
+ 
+<div class="w-full max-w-2xl space-y-8">
+  
+  
+  <div id="statusMessage" class="hidden status-message text-center text-sm"></div>
+
+  
+  <div id="loginView" class="hidden">
+    <header class="mb-8">
+      <h2 class="text-3xl font-medium text-black flex items-center space-x-3">
+        <i data-lucide="key" class="w-8 h-8"></i>
+        <span>Autenticación</span>
+      </h2>
+    <p class="text-gray-600 mt-2 text-sm">Ingresa tu token JWT para acceder al gestor de tareas.</p>
+    </header>
+
+    <form id="loginForm" class="space-y-6">
+      <div class="space-y-2">
+        <label for="jwtInput" class="block text-sm font-medium">Token JWT</label>
+        <textarea id="jwtInput" rows="3" 
+                  placeholder="eyJhbGciOiJIUzI1Ni..." required
+                  class="w-full p-3 border-2 border-black focus:ring-0 placeholder-gray-400 text-sm font-mono"></textarea>
+      </div>
+
+      <button type="submit" id="loginButton"
+              class="w-full bg-black text-white font-medium py-3 px-6 hover:bg-gray-800 transition-colors flex items-center justify-center space-x-2">
+        <i data-lucide="log-in" class="w-5 h-5"></i>
+        <span>Continuar</span>
+      </button>
+    </form>
+  </div>
+
+
+    
+  <div id="taskApp" class="hidden space-y-8">
+    
+    <header class="flex justify-between items-center border-b border-black pb-6">
+      <div>
+        <h1 class="text-4xl font-medium text-black">Tareas</h1>
+        <p class="text-gray-600 mt-1 text-sm">Gestiona tus tareas diarias</p>
+      </div>
+      <button onclick="logoutAndRedirect()"
+              class="text-sm hover:text-gray-600 flex items-center space-x-2 py-2 px-4 border-2 border-black hover:bg-black hover:text-white transition-colors">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+        <span>Salir</span>
+      </button>
+    </header>
+
+    
+    <form id="taskForm" class="flex gap-4">
+      <input type="text" id="taskDescription" 
+             placeholder="Nueva tarea..." required
+             class="flex-grow py-3 px-4 border-b-2 border-black focus:outline-none focus:border-gray-600 text-lg bg-transparent">
+      <button type="submit" id="submitButton"
+              class="bg-black text-white px-6 hover:bg-gray-800 transition-colors flex items-center space-x-2">
+        <i data-lucide="plus" class="w-5 h-5"></i>
+        <span class="hidden sm:inline">Agregar</span>
+      </button>
+    </form>
+
+    
+    <div class="space-y-8">
+      
+      <div id="loadingIndicator" class="hidden flex justify-center py-8">
+        <div class="spinner"></div>
+      </div>
+      
+      
+      <div class="space-y-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-medium">Pendientes</h2>
+          <span id="pendingCount" class="text-sm text-gray-600">0 tareas</span>
+        </div>
+        <div id="pendingTasks" class="space-y-4">
+        
+        </div>
+      </div>
+
+      
+      <div class="space-y-4" id="completedSection">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-medium">Completadas</h2>
+          <div class="flex items-center space-x-4">
+            <span id="completedCount" class="text-sm text-gray-600">0 tareas</span>
+            <button id="deleteCompletedBtn" 
+                    class="text-sm border-2 border-black px-4 py-2 hover:bg-black hover:text-white transition-colors hidden">
+              Eliminar completadas
+            </button>
+          </div>
+        </div>
+        <div id="completedTasks" class="space-y-4">
+          
+        </div>
+      </div>
+      
+      
+      <p id="emptyMessage" class="hidden text-center py-12 text-gray-500 text-sm flex items-center justify-center space-x-2">
+        <i data-lucide="check" class="w-5 h-5"></i>
+        <span>No hay tareas</span>
+      </p>
+    </div>
+  </div>
+
+</div>
+
+ 
+<script>
+  const API_URL = '/api/tasks';
+  const taskList = document.getElementById('taskList');
+  const taskForm = document.getElementById('taskForm');
+  const taskDescriptionInput = document.getElementById('taskDescription');
+  const loadingIndicator = document.getElementById('loadingIndicator');
+  const emptyMessage = document.getElementById('emptyMessage');
+  const statusMessage = document.getElementById('statusMessage');
+  const loginView = document.getElementById('loginView');
+  const taskApp = document.getElementById('taskApp');
+  const loginForm = document.getElementById('loginForm');
+  const jwtInput = document.getElementById('jwtInput');
+
+  // ---------------------- FUNCIONES DE AUTENTICACIÓN Y ESTADO ----------------------
+
+  const getJwtToken = () => {
+      return localStorage.getItem('jwtToken');
+  };
+
+  function logoutAndRedirect() {
+      localStorage.removeItem('jwtToken');
+      displayStatus('Sesión cerrada. Por favor, inicie sesión nuevamente.', 'bg-yellow-100 text-yellow-700', 3000);
+      checkTokenStatus(); // Muestra la vista de login
+  }
+
+  function displayStatus(message, classes, duration = 4000) {
+      statusMessage.textContent = message;
+      statusMessage.className = `status-message ${classes} text-center`;
+      statusMessage.classList.remove('hidden');
+
+      setTimeout(() => {
+          statusMessage.classList.add('hidden');
+      }, duration);
+  }
+
+  // Controla qué vista se muestra (Login o Tareas)
+  async function checkTokenStatus() {
+      const token = getJwtToken();
+      
+      if (!token) {
+          console.log('No hay token, redirigiendo a login');
+          window.location.href = '/login.html';
+          return;
+      }
+
+      try {
+          // Intentamos hacer una petición a la API para validar el token
+          const response = await fetch(API_URL, {
+              headers: {
+                  'Authorization': `Bearer ${token}`
+              }
+          });
+
+          if (response.status === 401 || response.status === 403) {
+              console.log('Token inválido o expirado');
+              localStorage.removeItem('jwtToken');
+              window.location.href = '/login.html';
+              return;
+          }
+
+          if (response.ok) {
+              console.log('Token válido, mostrando tareas');
+              loginView.classList.add('hidden');
+              taskApp.classList.remove('hidden');
+              await loadTasks();
+          }
+      } catch (error) {
+          console.error('Error al validar el token:', error);
+          displayStatus('Error al validar la sesión', 'bg-red-100 text-red-700');
+      }
+  }
+
+  // Maneja el envío del formulario de login
+  loginForm.onsubmit = (e) => {
+      e.preventDefault();
+      const token = jwtInput.value.trim();
+      if (token) {
+          localStorage.setItem('jwtToken', token);
+          displayStatus("Token guardado. Intentando cargar tareas...", 'bg-indigo-100 text-indigo-700', 2000);
+          checkTokenStatus(); // Cambia a la vista de tareas e intenta cargar
+      } else {
+          displayStatus("Por favor, pegue un token JWT válido.", 'bg-red-100 text-red-700');
+      }
+  };
+
+  // ---------------------- FUNCIÓN DE FETCH AUTENTICADA ----------------------
+
+  async function authFetch(url, options = {}) {
+      const token = getJwtToken();
+
+      if (!token) {
+          console.log('No hay token en authFetch');
+          window.location.href = '/login.html';
+          throw new Error("No JWT token found.");
+      }
+
+      const headers = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          ...options.headers
+      };
+
+      options.headers = headers;
+
+      try {
+          const response = await fetch(url, options);
+
+          // Manejo de errores de seguridad 401 y 403
+          if (response.status === 401 || response.status === 403) {
+              displayStatus(`Error de Autenticación (${response.status}): Su sesión es inválida o caducó. Por favor, inicie sesión nuevamente.`, 'bg-red-100 text-red-700', 8000);
+              // CRÍTICO: Eliminar el token para que se muestre la vista de login.
+              logoutAndRedirect();
+              throw new Error(`Authentication failure: ${response.status}`);
+          }
+
+          if (response.ok || response.status === 204) {
+              return response;
+          }
+
+          const errorText = await response.text();
+          console.error(`Error del servidor ${response.status}:`, errorText);
+          displayStatus(`Error del servidor (${response.status}): No se completó la operación.`, 'bg-red-100 text-red-700', 5000);
+          throw new Error(`Server error: ${response.statusText}`);
+
+      } catch (error) {
+          console.error("Error en authFetch:", error);
+          if (error.message.startsWith("Failed to fetch")) {
+               displayStatus("Error de conexión: El backend no está disponible.", 'bg-red-100 text-red-700', 8000);
+          }
+          throw error;
+      }
+  }
+
+  // ---------------------- INICIALIZACIÓN Y RENDERIZADO ----------------------
+
+  document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      checkTokenStatus(); // Inicia la verificación del token y decide qué vista mostrar
+  });
+
+  function renderTask(task) {
+      const listItem = document.createElement('div');
+      listItem.className = 'task-enter group flex items-center justify-between py-4 px-2 border-b border-gray-200 hover:border-black transition-colors';
+      listItem.setAttribute('data-id', task.id);
+
+      const taskContent = document.createElement('div');
+      taskContent.className = 'flex items-center flex-grow min-w-0 space-x-4';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = task.completed;
+      checkbox.className = 'checkbox-custom';
+      checkbox.onchange = () => toggleTaskCompleted(task.id, !task.completed);
+
+      const descriptionSpan = document.createElement('span');
+      descriptionSpan.textContent = task.description;
+      descriptionSpan.className = 'text-base ' + 
+        (task.completed ? 'line-through text-gray-400' : 'text-black');
+
+      taskContent.appendChild(checkbox);
+      taskContent.appendChild(descriptionSpan);
+
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'hidden group-hover:block p-2 hover:text-red-600';
+      deleteButton.innerHTML = '<i data-lucide="x" class="w-4 h-4"></i>';
+      deleteButton.onclick = () => {
+          if(confirm('¿Estás seguro de que deseas eliminar esta tarea?')) {
+              displayStatus('Eliminando tarea...', 'bg-black text-white', 1500);
+              deleteTask(task.id);
+          }
+      };
+
+      listItem.appendChild(taskContent);
+      listItem.appendChild(deleteButton);
+
+      lucide.createIcons({ attr: 'data-lucide', element: deleteButton });
+
+      return listItem;
+  }
+
+  function updateUIState(tasks) {
+      const hasTasks = tasks && tasks.length > 0;
+      emptyMessage.classList.toggle('hidden', hasTasks);
+      taskList.classList.toggle('hidden', !hasTasks);
+  }
+
+  // ---------------------- FUNCIONES DE CRUD (API) ----------------------
+
+  async function deleteCompletedTasks() {
+      if (!confirm('¿Estás seguro de que deseas eliminar todas las tareas completadas?')) return;
+      
+      const completedTasks = document.querySelectorAll('#completedTasks [data-id]');
+      displayStatus('Eliminando tareas completadas...', 'bg-black text-white');
+      
+      try {
+          for (const task of completedTasks) {
+              const id = task.getAttribute('data-id');
+              await authFetch(`${API_URL}/${id}`, { method: 'DELETE' });
+          }
+          displayStatus('Tareas completadas eliminadas con éxito', 'bg-black text-white');
+          await loadTasks();
+      } catch (error) {
+          displayStatus('Error al eliminar las tareas completadas', 'border-red-500 text-red-500');
+      }
+  }
+
+  function updateTaskCounts(tasks) {
+      const pendingTasks = tasks.filter(t => !t.completed);
+      const completedTasks = tasks.filter(t => t.completed);
+      
+      document.getElementById('pendingCount').textContent = `${pendingTasks.length} ${pendingTasks.length === 1 ? 'tarea' : 'tareas'}`;
+      document.getElementById('completedCount').textContent = `${completedTasks.length} ${completedTasks.length === 1 ? 'tarea' : 'tareas'}`;
+      
+      // Mostrar/ocultar botón de eliminar completadas
+      document.getElementById('deleteCompletedBtn').classList.toggle('hidden', completedTasks.length === 0);
+      document.getElementById('completedSection').classList.toggle('hidden', completedTasks.length === 0);
+  }
+
+  async function loadTasks() {
+      loadingIndicator.classList.remove('hidden');
+      document.getElementById('pendingTasks').innerHTML = '';
+      document.getElementById('completedTasks').innerHTML = '';
+
+      try {
+          const response = await authFetch(API_URL);
+          const tasks = await response.json();
+          
+          const pendingTasks = tasks.filter(t => !t.completed);
+          const completedTasks = tasks.filter(t => t.completed);
+          
+          pendingTasks.forEach(task => {
+              document.getElementById('pendingTasks').appendChild(renderTask(task));
+          });
+          
+          completedTasks.forEach(task => {
+              document.getElementById('completedTasks').appendChild(renderTask(task));
+          });
+
+          updateTaskCounts(tasks);
+          updateUIState(tasks);
+          lucide.createIcons(); // Recrear iconos para las nuevas tareas
+      } catch (error) {
+          updateUIState([]);
+          updateTaskCounts([]);
+      } finally {
+          loadingIndicator.classList.add('hidden');
+      }
+  }
+
+  // Event Listeners
+  document.getElementById('deleteCompletedBtn').addEventListener('click', deleteCompletedTasks);
+
+  taskForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const description = taskDescriptionInput.value.trim();
+      if (!description || !getJwtToken()) return;
+
+      const newTask = { description: description, completed: false };
+      const submitButton = document.getElementById('submitButton');
+      submitButton.disabled = true;
+      submitButton.classList.add('opacity-50');
+
+      try {
+          const response = await authFetch(API_URL, {
+              method: 'POST',
+              body: JSON.stringify(newTask)
+          });
+
+          if (response.ok) {
+              displayStatus("Tarea creada exitosamente.", 'bg-green-100 text-green-700');
+              taskDescriptionInput.value = '';
+              await loadTasks();
+          }
+      } catch (error) {
+          // Error ya manejado y mostrado por authFetch
+      } finally {
+          submitButton.disabled = false;
+          submitButton.classList.remove('opacity-50');
+      }
+  };
+
+  async function toggleTaskCompleted(id, newCompletedState) {
+      if (!getJwtToken()) return;
+      try {
+          const currentResponse = await authFetch(`${API_URL}/${id}`);
+          const currentTask = await currentResponse.json();
+
+          const updatedDetails = {
+              description: currentTask.description,
+              completed: newCompletedState
+          };
+
+          const response = await authFetch(`${API_URL}/${id}`, {
+              method: 'PUT',
+              body: JSON.stringify(updatedDetails)
+          });
+
+          if (response.status === 401 || response.status === 403) {
+              throw new Error('Unauthorized');
+          }
+
+          if (response.ok) {
+              displayStatus("Estado de la tarea actualizado.", 'bg-black text-white');
+              await loadTasks();
+          }
+      } catch (error) {
+          if (error.message === 'Unauthorized') {
+              logoutAndRedirect();
+          } else {
+              console.error('Error al actualizar tarea:', error);
+              displayStatus("Error al actualizar la tarea.", 'border-red-500 text-red-500');
+          }
+      }
+  }
+
+  async function deleteTask(id) {
+      if (!getJwtToken()) return;
+      try {
+          const response = await authFetch(`${API_URL}/${id}`, {
+              method: 'DELETE'
+          });
+
+          if (response.status === 204) {
+              displayStatus("Tarea eliminada correctamente.", 'bg-green-100 text-green-700');
+              await loadTasks();
+          }
+      } catch (error) {
+          // Error ya manejado por authFetch
+      }
+  }
+</script>
+</body>
+</html>

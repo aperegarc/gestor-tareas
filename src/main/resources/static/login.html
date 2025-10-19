@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+<div class="w-full max-w-sm bg-white p-8 rounded-xl shadow-2xl transition-all duration-300">
+    <h1 class="text-3xl font-bold text-gray-800 text-center mb-6">Acceder</h1>
+
+    <form id="login-form" class="space-y-6">
+
+        <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" id="email" name="email" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                   placeholder="tu.correo@ejemplo.com">
+        </div>
+
+        <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+            <input type="password" id="password" name="password" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                   placeholder="••••••••">
+        </div>
+
+        <button type="submit"
+                class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition duration-200 shadow-md">
+            Iniciar Sesión
+        </button>
+    </form>
+
+    <p id="status-message" class="text-center p-3 mt-6 rounded-lg font-medium hidden"></p>
+
+    <div class="mt-6 text-center text-sm">
+        ¿No tienes cuenta?
+        <a href="/registro.html" class="text-indigo-600 hover:text-indigo-800 font-medium transition duration-150">Regístrate aquí</a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.getElementById('login-form');
+        const statusMessage = document.getElementById('status-message');
+
+        function showMessage(message, isError = false) {
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+            statusMessage.classList.add(isError ? 'bg-red-100' : 'bg-green-100', isError ? 'text-red-700' : 'text-green-700');
+        }
+
+        form.addEventListener('submit', handleSubmit);
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.token) {
+                        localStorage.setItem('jwtToken', data.token);
+                        const savedToken = localStorage.getItem('jwtToken');
+                        if (savedToken === data.token) {
+                            showMessage('Inicio de sesión exitoso. Redirigiendo...', false);
+                            setTimeout(() => {
+                                window.location.href = '/tasks.html';
+                            }, 1000);
+                        } else {
+                            showMessage('Error al guardar el token de autenticación.', true);
+                        }
+                    } else {
+                        showMessage('Error de servidor: Token no recibido.', true);
+                    }
+                } else {
+                    showMessage(data.message || 'Credenciales incorrectas o error desconocido.', true);
+                }
+            } catch (error) {
+                console.error('Error de red:', error);
+                showMessage('Error al conectar con el servidor.', true);
+            }
+        }
+    });
+</script>
+</body>
+</html>

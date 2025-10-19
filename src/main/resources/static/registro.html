@@ -1,0 +1,134 @@
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Usuario</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Fondo gris claro */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+<div class="w-full max-w-md bg-white p-8 rounded-xl shadow-2xl transition-all duration-300">
+    <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Registro</h1>
+    <p id="message-box" class="text-center p-2 mb-4 rounded-lg font-medium hidden"></p>
+
+    <form id="register-form" class="space-y-6">
+
+
+        <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+            <input type="text" id="name" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                   placeholder="Tu nombre completo">
+        </div>
+
+        <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
+            <input type="email" id="email" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                   placeholder="ejemplo@dominio.com">
+        </div>
+
+        <div>
+            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+            <input type="password" id="password" required
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                   placeholder="Mínimo 6 caracteres">
+        </div>
+
+        <button type="submit" id="register-button"
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150">
+            Registrar
+        </button>
+
+        <p class="text-center text-sm text-gray-600 mt-4">
+            ¿Ya tienes una cuenta?
+            <a href="/login.html" class="text-indigo-600 hover:text-indigo-500 font-medium">Inicia Sesión</a>
+        </p>
+    </form>
+</div>
+
+<script>
+    document.getElementById('register-form').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const name = document.getElementById('name').value;
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        const messageBox = document.getElementById('message-box');
+        const registerButton = document.getElementById('register-button');
+
+        
+        messageBox.classList.add('hidden');
+        messageBox.textContent = '';
+
+        
+        registerButton.disabled = true;
+        registerButton.textContent = 'Registrando...';
+
+        
+        const url = '/api/auth/register';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    password: password
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                
+                messageBox.textContent = '✅ ' + (data.message || "Registro exitoso. Serás redirigido...");
+                messageBox.classList.remove('hidden', 'bg-red-100', 'text-red-700');
+                messageBox.classList.add('bg-green-100', 'text-green-700');
+
+                
+                setTimeout(() => {
+                    window.location.href = "/login.html";
+                }, 2000);
+
+            } else {
+                
+                const errorMessage = data.message || data.error || "Error desconocido del servidor.";
+                throw new Error(errorMessage);
+            }
+
+        } catch (error) {
+            
+            console.error('Error en la solicitud de registro:', error);
+
+            let displayMessage = "Error de conexión o de servidor. Inténtalo más tarde.";
+            if (error.message.includes("El email ya está registrado")) {
+                displayMessage = "🛑 El correo electrónico ya está en uso.";
+            } else if (!error.message.includes("Error desconocido del servidor")) {
+                // Muestra el mensaje de error si fue devuelto por el servidor
+                displayMessage = "🛑 " + error.message;
+            }
+
+            messageBox.textContent = displayMessage;
+            messageBox.classList.remove('hidden', 'bg-green-100', 'text-green-700');
+            messageBox.classList.add('bg-red-100', 'text-red-700');
+        } finally {
+            
+            registerButton.disabled = false;
+            registerButton.textContent = 'Registrar';
+        }
+    });
+</script>
+</body>
+</html>
