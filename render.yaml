@@ -1,11 +1,13 @@
 services:
   - type: web
     name: gestor-tareas
-    env: java
-    buildCommand: ./mvnw clean package
-    startCommand: java -jar target/*.jar
+    runtime: docker
     envVars:
       - key: PORT
         value: 8080
+      - key: JWT_SECRET
+        value: NjIzYzcwY2ItMTYxZi00MWJmLTgyY2UtYmQwMjllYzMwNzYyOGFjNDgwMTctOTAyMy00OWU0LWI5ZTgtYzFkZTliOTBhZWRm
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
     plan: free
     autoDeploy: true
