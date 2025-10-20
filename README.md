@@ -18,12 +18,12 @@ La aplicación permite a los usuarios:
 
 ## 2. Tecnologías Utilizadas
 
-- Java 17+
-- Spring Boot 3
+- Java
+- Spring Boot
 - Spring Security
 - Spring Data JPA
 - H2 Database
-- JWT (io.jsonwebtoken)
+- JWT
 - Maven
 
 ---
