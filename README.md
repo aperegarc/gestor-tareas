@@ -331,7 +331,3 @@ GET http://localhost:8080/api/tasks
 - Ideal para desarrollo o pruebas. Para producción, se recomienda una base de datos persistente (MySQL, PostgreSQL, etc).
 
 ---
-
-## 11. Licencia
-
-MIT - Puedes usar, modificar y distribuir libremente este proyecto.
